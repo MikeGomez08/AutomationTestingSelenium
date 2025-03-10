@@ -6,20 +6,41 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-PATH = "C:/Program Files (x86)/chromedriver.exe"
-service = Service(PATH)
-driver = webdriver.Chrome(service=service)
-driver.get("https://demoqa.com/books")
-print(driver.title)
+class SeleniumAutomation:
+    def __init__(self, driver_path):
+        self.service = Service(driver_path)
+        self.driver = webdriver.Chrome(service=self.service)
+    
+    def open_website(self, url):
+        self.driver.get(url)
+        print(f"Opened website: {self.driver.title}")
+    
+    def close_browser(self):
+        self.driver.quit()
 
-# Wait until the search box is present
-search = WebDriverWait(driver, 10).until(
-    EC.presence_of_element_located((By.ID, "searchBox"))
-)
-search.send_keys("Git Pocket Guide")
-search.send_keys(Keys.RETURN)
+class BookSearch(SeleniumAutomation):
+    def __init__(self, driver_path, url):
+        super().__init__(driver_path)
+        self.open_website(url)
+    
+    def search_book(self, book_title):
+        try:
+            search_box = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, "searchBox"))
+            )
+            search_box.send_keys(book_title)
+            search_box.send_keys(Keys.RETURN)
+            print(f"Searched for: {book_title}")
+            
+            # Wait to observe results
+            time.sleep(5)
+        except Exception as e:
+            print(f"Error: {e}")
 
-# Wait for some time to observe the results
-time.sleep(10)
-
-driver.quit()
+if __name__ == "__main__":
+    PATH = "C:/Program Files (x86)/chromedriver.exe"
+    URL = "https://demoqa.com/books"
+    
+    bot = BookSearch(PATH, URL)
+    bot.search_book("Git Pocket Guide")
+    bot.close_browser()
