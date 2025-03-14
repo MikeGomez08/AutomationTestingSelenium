@@ -6,59 +6,163 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-# Base class for Selenium automation
 class SeleniumAutomation:
     def __init__(self, driver_path):
-        # Initialize the Chrome driver service
-        self.service = Service(driver_path)
-        # Create a new instance of the Chrome driver
-        self.driver = webdriver.Chrome(service=self.service)
+        try:
+            self.service = Service(driver_path)
+            options = webdriver.ChromeOptions()
+            options.add_argument('--ignore-certificate-errors')
+            self.driver = webdriver.Chrome(service=self.service, options=options)
+        except Exception as e:
+            print(f"Error initializing WebDriver: {e}")
+            exit(1)
     
     def open_website(self, url):
-        # Open the specified URL in the browser
-        self.driver.get(url)
-        print(f"Opened website: {self.driver.title}")
+        try:
+            self.driver.get(url)
+            self.handle_ssl_warning()
+            print(f"Opened website: {self.driver.title}")
+        except Exception as e:
+            print(f"Error opening website: {e}")
+    
+    def handle_ssl_warning(self):
+        try:
+            WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.ID, "details-button"))
+            ).click()
+            WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.ID, "proceed-link"))
+            ).click()
+            print("Bypassed SSL warning.")
+        except Exception as e:
+            print("No SSL warning found or error occurred: ", e)
+    
+    def click_login_button(self):
+        try:
+            login_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "logintoaccount"))
+            )
+            login_button.click()
+            print("Clicked on 'Log In to your account' button.")
+
+            # Wait for the modal to appear
+            WebDriverWait(self.driver, 10).until(
+                EC.visibility_of_element_located((By.ID, "AUTHORIZED"))
+            )
+            print("Modal appeared successfully.")
+
+            # Click OK button inside the modal
+            ok_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'OK')]") )
+            )
+            ok_button.click()
+            print("Clicked 'OK' button in modal.")
+        
+        except Exception as e:
+            print(f"Error clicking login button or waiting for modal: {e}")
+    
+    def enter_credentials_and_submit(self, username, password):
+        try:
+            username_field = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, "Username"))
+            )
+            password_field = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, "Password"))
+            )
+            submit_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "load"))
+            )
+
+            username_field.send_keys(username)
+            password_field.send_keys(password)
+            submit_button.click()
+            print("Entered credentials and clicked submit.")
+        except Exception as e:
+            print(f"Error entering credentials or clicking submit: {e}")
+    
+    def select_ppgis_button(self):
+        try:
+            pp_gis_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "PPGISBTN"))
+            )
+            pp_gis_button.click()
+            print("Clicked on PPGIS button.")
+        except Exception as e:
+            print(f"Error selecting PPGIS button: {e}")
+    
+    def click_navbar_button(self):
+        try:
+            navbar_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//*[@id="bs-example-navbar-collapse-1"]/span'))
+            )
+            navbar_button.click()
+            print("Clicked on navbar button.")
+        except Exception as e:
+            print(f"Error clicking navbar button: {e}")
+    
+    def click_pole_inventory(self):
+        try:
+            pole_inventory_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//img[@id="imgdigitize"]'))
+            )
+            pole_inventory_button.click()
+            print("Clicked on Pole Inventory image.")
+
+            generate_ticket_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//li[@id="POLE_INVENTORY"]'))
+            )
+            generate_ticket_button.click()
+            print("Clicked on Generate Ticket.")
+        except Exception as e:
+            print(f"Error clicking Pole Inventory or Generate Ticket: {e}")
     
     def close_browser(self):
-        # Close the browser
-        self.driver.quit()
+        try:
+            input("Press Enter to close the browser...")
+            self.driver.quit()
+        except Exception as e:
+            print(f"Error closing browser: {e}")
 
-# Derived class for book search functionality
-class BookSearch(SeleniumAutomation):
+class MapPerformanceTest(SeleniumAutomation):
     def __init__(self, driver_path, url):
-        # Initialize the base class
         super().__init__(driver_path)
-        # Open the specified URL
         self.open_website(url)
     
-    def search_book(self, book_title):
+    def test_location_performance(self, latitude, longitude):
         try:
-            # Wait until the search box element is present
             search_box = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.ID, "searchBox"))
+                EC.presence_of_element_located((By.ID, "searchboxinput"))
             )
-            # Enter the book title in the search box
-            search_box.send_keys(book_title)
-            # Press the RETURN key to submit the search
+            location = f"{latitude}, {longitude}"
+            search_box.send_keys(location)
             search_box.send_keys(Keys.RETURN)
-            print(f"Searched for: {book_title}")
+            print(f"Searching for location: {location}")
             
-            # Wait for 5 seconds to observe the results
+            start_time = time.time()
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "section-hero-header-title-title"))
+            )
+            end_time = time.time()
+            print(f"Location loaded in {end_time - start_time:.2f} seconds")
             time.sleep(5)
         except Exception as e:
-            # Print any error that occurs
-            print(f"Error: {e}")
+            print(f"Error during location search: {e}")
 
-# Main block to execute the script
 if __name__ == "__main__":
-    # Path to the Chrome driver executable
     PATH = "C:/Program Files (x86)/chromedriver.exe"
-    # URL of the website to be tested
-    URL = "https://demoqa.com/books"
+    URL = "https://vptgprprdwapp01/PPGISWEB_EP4_PREBAU/Map/index"
     
-    # Create an instance of the BookSearch class
-    bot = BookSearch(PATH, URL)
-    # Search for a specific book
-    bot.search_book("Git Pocket Guide")
-    # Close the browser
-    bot.close_browser()
+    bot = None
+    try:
+        bot = MapPerformanceTest(PATH, URL)
+        bot.click_login_button()
+        bot.enter_credentials_and_submit("t-dmdianzon", "p@55w0rd0111")
+        bot.select_ppgis_button()
+        bot.click_navbar_button()
+        bot.click_pole_inventory()
+        bot.test_location_performance(14.5562728, 121.0026765)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+    finally:
+        if bot:
+            bot.close_browser()
